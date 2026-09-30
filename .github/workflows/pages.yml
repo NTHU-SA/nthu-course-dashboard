@@ -1,0 +1,80 @@
+name: Course dashboard
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */2 * * *"
+
+permissions: {}
+
+concurrency:
+  group: course-pages-${{ github.event.pull_request.number || 'main' }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Test standalone code
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m ruff check .
+          python -m ruff format --check .
+          python -m pytest -q
+          node --test tests/course_dashboard.test.cjs
+      - name: Fetch published data history
+        env:
+          SOURCE_DIR: ${{ runner.temp }}/course-source
+        run: |
+          git clone --filter=blob:none --single-branch --branch data \
+            --no-tags --no-checkout \
+            https://github.com/NTHU-SA/NTHU-Data-Scraper.git "$SOURCE_DIR"
+      - name: Generate and verify pinned source
+        env:
+          SOURCE_DIR: ${{ runner.temp }}/course-source
+        run: |
+          python generate_course_dashboard.py --source-dir "$SOURCE_DIR" --output site
+          COURSE_SOURCE_DIR="$SOURCE_DIR" python -m pytest -q tests/test_source_history.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          site = Path("site")
+          bundle = json.loads((site / json.loads((site / "manifest.json").read_text())["file"]).read_text())
+          print("Pinned source:", bundle["source_sha"])
+          print("History:", len(bundle["snapshots"]), bundle["snapshots"][0]["time"], bundle["snapshots"][-1]["time"])
+          print("Latest:", bundle["snapshots"][-1]["summary"])
+          PY
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        with:
+          path: site
+          retention-days: 1
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
