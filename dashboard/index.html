@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>11510｜清華課程</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳至主要內容</a>
+  <header class="masthead">
+    <a href="#main" class="brand">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 14v3M12 9v8M17 5v12"/></svg>
+      清華課程
+    </a>
+    <nav aria-label="頁面導覽"><a href="#overview">概況</a><a href="#schedule">時段</a><a href="#explore">課程</a><a href="#history">變動</a></nav>
+  </header>
+  <main id="main" tabindex="-1">
+    <div class="page-heading">
+      <h1><span id="semester">11510</span> 課程資料</h1>
+      <p id="snapshot-meta" class="page-meta"></p>
+    </div>
+    <div id="status" class="notice" role="status">載入課程資料中…</div>
+    <div id="load-actions" hidden>
+      <button id="retry" class="secondary">重新載入</button>
+      <p class="caption">若仍無法載入，請稍後再試；網站可能正在更新資料。</p>
+    </div>
+    <div id="dashboard" hidden>
+      <section class="observation-panel" aria-label="歷史觀測選擇">
+        <label for="snapshot">資料時間 <select id="snapshot"></select></label>
+        <div class="snapshot-controls">
+          <button id="snapshot-prev" class="icon-button" aria-label="上一筆紀錄" title="上一筆紀錄"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+          <input id="timeline" type="range" min="0" value="0" aria-label="選擇歷史紀錄">
+          <button id="snapshot-next" class="icon-button" aria-label="下一筆紀錄" title="下一筆紀錄"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+          <span id="snapshot-position"></span>
+        </div>
+        <a id="source-link" target="_blank" rel="noopener noreferrer">來源 commit</a>
+      </section>
+      <details class="data-notes">
+        <summary>資料說明</summary>
+        <p>沒有選課人數。人限不是剩餘名額；空白表示未提供，0 的意義尚未確認。</p>
+        <p>資料時間為 Git commit 時間，不是固定每小時或即時更新。第一筆作為比較基準；課程從紀錄移除不代表停開。</p>
+        <p>開課單位依科號代碼分組。通識採用原資料的類別；多位教師或多間教室合列時，不另行拆分。</p>
+        <p>同課同節次只計一次。異常時段不列入統計，原文保留在課程詳情；節次代碼不換算鐘點。</p>
+        <p>選課限制、擋修及加簽規則以校方公告為準。</p>
+        <p id="provenance" class="caption"></p>
+      </details>
+      <section class="filter-panel" aria-label="共用課程篩選">
+        <label class="search-label">搜尋<div class="search-field"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="search" type="search" placeholder="課名、課號、教師" autocomplete="off"></div></label>
+        <label>開課單位<select id="unit"><option value="">全部單位</option></select></label>
+        <label>授課語言<select id="language"><option value="">全部語言</option><option value="__missing">未提供</option></select></label>
+        <label>通識類別<select id="ge"><option value="">全部課程</option><option value="__any">所有通識</option><option value="__none">非通識／未標示</option></select></label>
+        <label>學分<select id="credit"><option value="">全部學分</option><option value="__missing">未提供</option></select></label>
+        <label>人限<select id="capacity"><option value="">所有人限</option><option value="positive">正數已知</option><option value="zero">0（語意未確認）</option><option value="unknown">未提供</option><option value="invalid">格式異常</option><option value="1-30">1–30</option><option value="31-60">31–60</option><option value="61-100">61–100</option><option value="101+">101 以上</option></select></label>
+        <label>星期<select id="day"><option value="">所有星期</option></select></label>
+        <label>節次<select id="period"><option value="">所有節次</option></select></label>
+        <label>停開<select id="suspend"><option value="">全部狀態</option><option value="yes">有停開註記</option><option value="no">無停開註記</option></select></label>
+        <button id="reset" class="secondary">清除篩選</button>
+        <p id="filter-summary" role="status"></p>
+      </section>
+      <section id="overview" class="section">
+        <div class="section-heading"><h2>課程概況</h2><span class="scope-tag">篩選結果</span></div>
+        <div id="metrics" class="metrics"></div>
+        <div class="chart-grid">
+          <article class="card"><h3>開課單位</h3><p class="caption">科號代碼・前 12 名</p><div id="unit-chart"></div></article>
+          <article class="card"><h3>授課語言</h3><div id="language-chart"></div><h3 class="subheading">學分</h3><div id="credit-chart"></div></article>
+          <article class="card"><h3>通識類別</h3><div id="ge-chart"></div></article>
+          <article class="card"><h3>人限分布</h3><div id="capacity-chart"></div></article>
+        </div>
+      </section>
+      <section id="schedule" class="section">
+        <div class="section-heading"><h2>上課時段</h2><span class="scope-tag">篩選結果</span></div>
+        <article class="card"><h3>各節次課程數</h3><div id="heatmap" class="table-scroll"></div><p id="schedule-quality" class="caption"></p></article>
+        <div class="chart-grid">
+          <article class="card"><h3>教室</h3><p class="caption">前 10 名</p><div id="room-chart"></div></article>
+          <article class="card"><h3>授課教師</h3><p class="caption">前 10 名</p><div id="teacher-chart"></div></article>
+        </div>
+      </section>
+      <section id="explore" class="section">
+        <div class="section-heading"><h2>課程列表</h2><button id="export"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg>匯出 CSV</button></div>
+        <div class="card">
+          <div class="table-toolbar"><p id="table-count"></p><label>排序<select id="sort"><option value="id">課號</option><option value="title">課名</option><option value="capacity-desc">正數人限：大 → 小</option><option value="credit-desc">學分：高 → 低</option></select></label></div>
+          <div class="table-scroll"><table class="course-table"><thead><tr><th scope="col">課程／課號</th><th scope="col">單位</th><th scope="col">教師</th><th scope="col">學分</th><th scope="col">語言</th><th scope="col">人限</th><th scope="col">時段</th></tr></thead><tbody id="course-rows"></tbody></table></div>
+          <div class="pagination"><button id="prev" class="secondary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>上一頁</button><span id="page-label" aria-live="polite"></span><button id="next" class="secondary">下一頁<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div>
+        </div>
+      </section>
+      <section id="history" class="section">
+        <div class="section-heading"><h2>歷史變動</h2><span class="scope-tag">全部課程・不套用篩選</span></div>
+        <div class="chart-grid">
+          <article class="card"><h3>課程筆數變化</h3><div id="course-trend"></div></article>
+          <article class="card"><h3>已知人限合計</h3><div id="capacity-trend"></div><p class="caption">只計入正數人限；覆蓋率見明細。</p></article>
+        </div>
+        <article class="card changes-card">
+          <div class="table-toolbar"><div><h3>本次變動</h3><p id="change-summary" class="caption"></p></div><label>異動類型<select id="change-kind"><option value="">所有變動</option><option value="added">新出現</option><option value="removed">移除</option><option value="size_limit">人限調整</option><option value="suspend">停開註記</option><option value="lecturer">授課教師</option><option value="time">時段</option><option value="language">授課語言</option><option value="other">其他欄位</option></select></label></div>
+          <div id="changes" class="change-list"></div>
+        </article>
+      </section>
+      <section class="quality-card"><div class="section-heading"><h2>缺漏與異常</h2><span class="scope-tag">全部課程</span></div><div id="quality"></div></section>
+    </div>
+  </main>
+  <footer>資料來源：<a href="https://www.ccxp.nthu.edu.tw/ccxp/INQUIRE/JH/OPENDATA/open_course_data.json" target="_blank" rel="noopener noreferrer">清華大學課程開放資料</a></footer>
+  <dialog id="detail" aria-labelledby="detail-title"><div class="dialog-toolbar"><span>課程詳情</span><button id="close-detail" class="icon-button" aria-label="關閉課程詳情" title="關閉課程詳情"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div id="detail-content"></div></dialog>
+</body>
+</html>
